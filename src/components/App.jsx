@@ -1,60 +1,63 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { Filter } from './Filter/Filter';
 import { ContactForm } from './ContactForm/ContactForm';
 import { ContactList } from './ContactList/ContactList';
 import { Title, SubTitle, EmptyContact } from './App.styled';
 import toast, { Toaster } from 'react-hot-toast';
 
-export class App extends Component {
-  state = {
-    contacts: [
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    filter: '',
-  };
+export const App = () => {
+  const [contacts, setContacts] = useState(() => {
+    return (
+      JSON.parse(localStorage.getItem('users')) ?? [
+        { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
+        { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
+        { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
+        { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
+      ]
+    );
+  });
 
-  componentDidMount() {
-    const LocalData = localStorage.getItem('users');
-    if (LocalData) this.setState({ contacts: JSON.parse(LocalData) });
-  }
+  const [filter, setFilter] = useState('');
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.contacts !== this.state.contacts)
-      localStorage.setItem('users', JSON.stringify(this.state.contacts));
-  }
+  useEffect(() => {
+    const localData = localStorage.getItem('users');
+    if (localData) setContacts(JSON.parse(localData));
+  }, []);
 
-  changeFilter = ({ target: { value } }) => {
-    this.setState({ filter: value });
-  };
+  useEffect(() => {
+    localStorage.setItem('users', JSON.stringify(contacts));
+  }, [contacts]);
 
-  removeContact = id => {
+  const removeContact = id => {
     toast.error('Delete user successfully');
-    this.setState(prev => ({
-      contacts: prev.contacts.filter(contact => contact.id !== id),
-    }));
+    setContacts(prev => prev.filter(contact => contact.id !== id));
+    localStorage.setItem(
+      'users',
+      JSON.stringify(contacts.filter(contact => contact.id !== id))
+    );
   };
 
-  addContact = contact => {
+  const addContact = contact => {
     toast.success('Create new user successfully');
-    this.setState(prevState => {
-      const isExist = prevState.contacts.find(
-        ({ name }) => name.toLowerCase() === contact.name.toLowerCase()
-      );
+    const isExist = contacts.some(
+      ({ name }) => name.toLowerCase() === contact.name.toLowerCase()
+    );
 
-      if (isExist) {
-        alert(`${contact.name} is already in contacts.`);
-        return;
-      }
+    if (isExist) {
+      alert(`${contact.name} is already in contacts.`);
+      return;
+    }
 
-      return { contacts: [contact, ...prevState.contacts] };
-    });
+    setContacts(prevContacts => [contact, ...prevContacts]);
+
+    localStorage.setItem('users', JSON.stringify([contact, ...contacts]));
   };
 
-  getFilterContacts = () => {
-    const { filter, contacts } = this.state;
+  const changeFilter = e => {
+    setFilter(e.target.value);
+  };
+
+  const getFilterContacts = () => {
     const normalizedFilter = filter.toLowerCase();
 
     return contacts.filter(contact =>
@@ -62,39 +65,34 @@ export class App extends Component {
     );
   };
 
-  render() {
-    const { filter } = this.state;
-    const filterContacts = this.getFilterContacts();
+  const filterContacts = getFilterContacts();
 
-    return (
-      <div
-        style={{
-          height: '100vh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexDirection: 'column',
-          color: '#010101',
-        }}
-      >
-        <Toaster />
-        <Title>Phonebook</Title>
-        <ContactForm onSubmit={this.addContact} />
-        <SubTitle>Contacts</SubTitle>
-        {this.state.contacts.length > 0 ? (
-          <Filter value={filter} onChange={this.changeFilter} />
-        ) : (
-          <EmptyContact>
-            Your phonebook is empty. Add first contact!
-          </EmptyContact>
-        )}
-        {this.state.contacts.length > 0 && (
-          <ContactList
-            contacts={filterContacts}
-            onRemoveContact={this.removeContact}
-          />
-        )}
-      </div>
-    );
-  }
-}
+  return (
+    <div
+      style={{
+        height: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'column',
+        color: '#010101',
+      }}
+    >
+      <Toaster />
+      <Title>Phonebook</Title>
+      <ContactForm onSubmit={addContact} />
+      <SubTitle>Contacts</SubTitle>
+      {contacts.length > 0 ? (
+        <Filter value={filter} onChange={changeFilter} />
+      ) : (
+        <EmptyContact>Your phonebook is empty. Add first contact!</EmptyContact>
+      )}
+      {contacts.length > 0 && (
+        <ContactList
+          contacts={filterContacts}
+          onRemoveContact={removeContact}
+        />
+      )}
+    </div>
+  );
+};
